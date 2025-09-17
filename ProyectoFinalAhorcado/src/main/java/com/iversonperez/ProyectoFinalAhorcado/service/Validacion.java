@@ -1,4 +1,5 @@
 package com.iversonperez.ProyectoFinalAhorcado.service;
 
-public class Validacion {
+public class Validacion
+{
 }

@@ -6,13 +6,14 @@ import com.iversonperez.ProyectoFinalAhorcado.model.Palabra;
 import com.iversonperez.ProyectoFinalAhorcado.model.Usuario;
 import com.iversonperez.ProyectoFinalAhorcado.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class UserService implements UserServiceImplements {
@@ -43,6 +44,32 @@ public class UserService implements UserServiceImplements {
         return userRepository.findByUsername(username)
                 .filter(user -> user.getPassword().equals(password))
                 .orElse(null);
+    }
+
+    // Nuevo: Find by ID (para profile y update)
+    public Optional<Usuario> findById(Integer id) {
+        return userRepository.findById(id);
+    }
+
+    // Nuevo: Update usuario
+    @Override
+    public Usuario actualizarUsuario(Integer id, Usuario usuarioActualizado) {
+        Optional<Usuario> optionalUsuario = userRepository.findById(id);
+        if (optionalUsuario.isPresent()) {
+            Usuario usuario = optionalUsuario.get();
+            if (usuarioActualizado.getUsername() != null) usuario.setUsername(usuarioActualizado.getUsername());
+            if (usuarioActualizado.getEmail() != null) usuario.setEmail(usuarioActualizado.getEmail());
+            if (usuarioActualizado.getPassword() != null) usuario.setPassword(usuarioActualizado.getPassword());
+            // No toques estadísticas, el trigger las maneja
+            return userRepository.save(usuario);
+        }
+        throw new RuntimeException("Usuario no encontrado");
+    }
+
+    // Nuevo: Delete usuario
+    @Override
+    public void eliminarUsuario(Integer id) {
+        userRepository.deleteById(id);
     }
 
     @Override
@@ -108,19 +135,18 @@ public class UserService implements UserServiceImplements {
             // Obtener palabra aleatoria
             Palabra palabra = obtenerPalabraAleatoria();
 
-            // Crear nueva partida usando stored procedure con parámetro OUT
+            // Crear nueva partida usando stored procedure
             String sql = "CALL sp_crear_partida(?, ?, ?, @partida_id)";
             jdbcTemplate.update(sql, usuarioId, palabra.getId(), palabra.getPalabra());
 
             // Obtener el ID de la partida creada
-            String getIdSql = "SELECT @partida_id as partida_id";
-            Map<String, Object> result = jdbcTemplate.queryForMap(getIdSql);
+            Map<String, Object> result = jdbcTemplate.queryForMap("SELECT @partida_id as partida_id");
             Integer partidaId = (Integer) result.get("partida_id");
 
             return obtenerPartidaPorId(partidaId);
 
         } catch (DataAccessException e) {
-            throw new RuntimeException("Error al crear nueva partida: " + e.getMessage());
+            throw new RuntimeException("Error al crear partida: " + e.getMessage());
         }
     }
 
@@ -133,18 +159,16 @@ public class UserService implements UserServiceImplements {
                 throw new RuntimeException("La partida ya ha terminado");
             }
 
-            String palabraActual = partida.getPalabra().toUpperCase();
             String letraUpper = letra.toUpperCase();
+            String palabraActual = partida.getPalabra().toUpperCase();
+            String letrasAdivinadas = partida.getLetrasAdivinadas().toUpperCase();
+            String letrasIncorrectas = partida.getLetrasIncorrectas().toUpperCase();
+            int intentosFallidos = partida.getIntentosFallidos();
 
-            // Verificar si la letra ya fue adivinada
-            if (partida.getLetrasAdivinadas().contains(letraUpper) ||
-                    partida.getLetrasIncorrectas().contains(letraUpper)) {
-                throw new RuntimeException("Esta letra ya fue utilizada");
+            if (letrasAdivinadas.contains(letraUpper) || letrasIncorrectas.contains(letraUpper)) {
+                throw new RuntimeException("Letra ya adivinada");
             }
 
-            String letrasAdivinadas = partida.getLetrasAdivinadas();
-            String letrasIncorrectas = partida.getLetrasIncorrectas();
-            Integer intentosFallidos = partida.getIntentosFallidos();
             EstadoPartida estado = partida.getEstado();
 
             if (palabraActual.contains(letraUpper)) {
@@ -162,8 +186,7 @@ public class UserService implements UserServiceImplements {
 
                 if (todasLasLetrasAdivinadas) {
                     estado = EstadoPartida.GANADA;
-                    // Actualizar estadísticas del usuario
-                    actualizarEstadisticasUsuario(partida.getUsuarioId(), true);
+                    // Actualizar estadísticas del usuario (pero el trigger lo hace)
                 }
             } else {
                 // Letra incorrecta
@@ -172,8 +195,7 @@ public class UserService implements UserServiceImplements {
 
                 if (intentosFallidos >= partida.getMaxIntentos()) {
                     estado = EstadoPartida.PERDIDA;
-                    // Actualizar estadísticas del usuario
-                    actualizarEstadisticasUsuario(partida.getUsuarioId(), false);
+                    // Actualizar estadísticas (trigger)
                 }
             }
 
@@ -206,6 +228,8 @@ public class UserService implements UserServiceImplements {
             partida.setMaxIntentos((Integer) result.get("max_intentos"));
             partida.setEstado(EstadoPartida.valueOf((String) result.get("estado")));
             partida.setPistasUsadas((Integer) result.get("pistas_usadas"));
+            partida.setCreatedAt((LocalDateTime) result.get("created_at"));
+            partida.setCompletedAt((LocalDateTime) result.get("completed_at"));
 
             return partida;
 
@@ -232,18 +256,5 @@ public class UserService implements UserServiceImplements {
         } catch (DataAccessException e) {
             throw new RuntimeException("Error al obtener palabra: " + e.getMessage());
         }
-    }
-
-    private void actualizarEstadisticasUsuario(Integer usuarioId, boolean gano) {
-        // No necesitamos este método porque tienes un TRIGGER en la base de datos
-        // que automáticamente actualiza las estadísticas cuando cambia el estado de la partida
-        // Comentado para evitar duplicación:
-
-        // try {
-        //     String sql = "CALL sp_actualizar_estadisticas_usuario(?, ?)";
-        //     jdbcTemplate.update(sql, usuarioId, gano ? 1 : 0);
-        // } catch (DataAccessException e) {
-        //     System.err.println("Error actualizando estadísticas: " + e.getMessage());
-        // }
     }
 }

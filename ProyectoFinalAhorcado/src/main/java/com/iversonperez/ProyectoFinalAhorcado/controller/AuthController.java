@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -113,12 +114,9 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            Usuario usuario = userService.findAll().stream()
-                    .filter(u -> u.getId().equals(userId))
-                    .findFirst()
-                    .orElse(null);
-
-            if (usuario != null) {
+            Optional<Usuario> optionalUsuario = userService.findById(userId);
+            if (optionalUsuario.isPresent()) {
+                Usuario usuario = optionalUsuario.get();
                 response.put("success", true);
                 response.put("usuario", Map.of(
                         "id", usuario.getId(),

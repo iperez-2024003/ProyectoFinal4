@@ -31,7 +31,7 @@ public class GameController {
             response.put("partidaId", partida.getId());
             response.put("palabraOculta", generarPalabraOculta(partida.getPalabra(), partida.getLetrasAdivinadas()));
             response.put("intentosRestantes", partida.getMaxIntentos() - partida.getIntentosFallidos());
-            response.put("letrasIncorrectas", partida.getLetrasIncorrectas().split(""));
+            response.put("letrasIncorrectas", partida.getLetrasIncorrectas().isEmpty() ? new String[0] : partida.getLetrasIncorrectas().split(""));
             response.put("estado", partida.getEstado().toString());
             response.put("pista1", palabra.getPista1());
             response.put("mensaje", "Nueva partida creada exitosamente");
@@ -59,9 +59,9 @@ public class GameController {
             response.put("success", true);
             response.put("palabraOculta", generarPalabraOculta(partida.getPalabra(), partida.getLetrasAdivinadas()));
             response.put("intentosRestantes", partida.getMaxIntentos() - partida.getIntentosFallidos());
-            response.put("letrasIncorrectas", partida.getLetrasIncorrectas().split(""));
+            response.put("letrasIncorrectas", partida.getLetrasIncorrectas().isEmpty() ? new String[0] : partida.getLetrasIncorrectas().split(""));
             response.put("estado", partida.getEstado().toString());
-            response.put("letraCorrecta", partida.getPalabra().contains(letra));
+            response.put("letraCorrecta", partida.getPalabra().toUpperCase().contains(letra));
 
             if (partida.getEstado().toString().equals("GANADA")) {
                 response.put("mensaje", "¡Felicitaciones! Has ganado la partida.");
@@ -109,7 +109,7 @@ public class GameController {
             response.put("success", true);
             response.put("palabraOculta", generarPalabraOculta(partida.getPalabra(), partida.getLetrasAdivinadas()));
             response.put("intentosRestantes", partida.getMaxIntentos() - partida.getIntentosFallidos());
-            response.put("letrasIncorrectas", partida.getLetrasIncorrectas().split(""));
+            response.put("letrasIncorrectas", partida.getLetrasIncorrectas().isEmpty() ? new String[0] : partida.getLetrasIncorrectas().split(""));
             response.put("estado", partida.getEstado().toString());
             response.put("pistasUsadas", partida.getPistasUsadas());
 
