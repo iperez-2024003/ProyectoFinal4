@@ -18,7 +18,7 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
-    // POST: Login
+
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> credentials) {
         Map<String, Object> response = new HashMap<>();
@@ -81,7 +81,7 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // Crear nuevo usuario
+
             Usuario nuevoUsuario = new Usuario(username,  password);
             Usuario usuarioGuardado = userService.save(nuevoUsuario);
 

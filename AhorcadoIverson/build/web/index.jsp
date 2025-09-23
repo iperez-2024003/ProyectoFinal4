@@ -26,7 +26,7 @@
 
         <!-- Formulario de login -->
         <form action="Validar" method="POST" class="formulario">
-            <input type="text" name="txtCorreo" placeholder="Usuario" required />
+            <input type="text" name="txtCorreo" placeholder="Usuario o Email" required />
             <input type="password" name="txtContrasena" placeholder="Contraseña" required />
             <button type="submit" name="btnIngresar" value="Ingresar" class="boton-brillante">
                 Iniciar Sesión
