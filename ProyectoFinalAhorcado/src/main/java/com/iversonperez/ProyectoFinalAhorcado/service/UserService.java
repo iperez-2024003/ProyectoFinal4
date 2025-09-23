@@ -58,7 +58,6 @@ public class UserService implements UserServiceImplements {
         if (optionalUsuario.isPresent()) {
             Usuario usuario = optionalUsuario.get();
             if (usuarioActualizado.getUsername() != null) usuario.setUsername(usuarioActualizado.getUsername());
-            if (usuarioActualizado.getEmail() != null) usuario.setEmail(usuarioActualizado.getEmail());
             if (usuarioActualizado.getPassword() != null) usuario.setPassword(usuarioActualizado.getPassword());
             // No toques estadísticas, el trigger las maneja
             return userRepository.save(usuario);

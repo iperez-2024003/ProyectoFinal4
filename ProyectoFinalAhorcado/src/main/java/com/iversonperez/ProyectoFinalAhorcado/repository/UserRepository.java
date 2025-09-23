@@ -13,12 +13,10 @@ public interface UserRepository extends JpaRepository<Usuario, Integer> {
 
     Optional<Usuario> findByUsername(String username);
 
-    Optional<Usuario> findByEmail(String email);
 
     @Query(value = "CALL sp_validar_usuario(:username, :password, @usuario_id); SELECT @usuario_id as usuario_id;", nativeQuery = true)
     Integer validarUsuario(@Param("username") String username, @Param("password") String password);
 
     boolean existsByUsername(String username);
 
-    boolean existsByEmail(String email);
 }

@@ -35,7 +35,6 @@ public class AuthController {
                 response.put("usuario", Map.of(
                         "id", usuario.getId(),
                         "username", usuario.getUsername(),
-                        "email", usuario.getEmail(),
                         "partidasJugadas", usuario.getPartidasJugadas(),
                         "partidasGanadas", usuario.getPartidasGanadas()
                 ));
@@ -59,7 +58,6 @@ public class AuthController {
 
         try {
             String username = userData.get("username");
-            String email = userData.get("email");
             String password = userData.get("password");
 
             // Validaciones básicas
@@ -69,11 +67,6 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            if (email == null || email.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("mensaje", "El email es requerido");
-                return ResponseEntity.badRequest().body(response);
-            }
 
             if (password == null || password.length() < 6) {
                 response.put("success", false);
@@ -89,15 +82,14 @@ public class AuthController {
             }
 
             // Crear nuevo usuario
-            Usuario nuevoUsuario = new Usuario(username, email, password);
+            Usuario nuevoUsuario = new Usuario(username,  password);
             Usuario usuarioGuardado = userService.save(nuevoUsuario);
 
             response.put("success", true);
             response.put("mensaje", "Usuario registrado exitosamente");
             response.put("usuario", Map.of(
                     "id", usuarioGuardado.getId(),
-                    "username", usuarioGuardado.getUsername(),
-                    "email", usuarioGuardado.getEmail()
+                    "username", usuarioGuardado.getUsername()
             ));
 
         } catch (Exception e) {
@@ -121,7 +113,6 @@ public class AuthController {
                 response.put("usuario", Map.of(
                         "id", usuario.getId(),
                         "username", usuario.getUsername(),
-                        "email", usuario.getEmail(),
                         "partidasJugadas", usuario.getPartidasJugadas(),
                         "partidasGanadas", usuario.getPartidasGanadas(),
                         "porcentajeVictoria", usuario.getPartidasJugadas() > 0 ?
