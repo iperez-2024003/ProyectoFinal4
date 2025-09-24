@@ -15,7 +15,6 @@ create table palabras (
 create table usuarios (
     id int auto_increment primary key,
     username varchar(50) unique not null,
-    email varchar(100) unique not null,
     password varchar(255) not null,
     partidas_jugadas int default 0,
     partidas_ganadas int default 0,
@@ -156,11 +155,7 @@ BEGIN
 END $$
 DELIMITER ;
 
--- Insertar datos de prueba
--- Usuarios de prueba
-INSERT INTO usuarios (username, email, password) VALUES 
-('admin', 'admin@test.com', 'admin123'),
-('player1', 'player1@test.com', 'pass123');
+
 
 -- Palabras (usando CALL para los stored procedures)
 CALL sp_insertar_palabra('JAVASCRIPT', 'Lenguaje de programación muy popular.', 'Se ejecuta principalmente en navegadores web.', 'Fundamental para crear páginas web interactivas.');
