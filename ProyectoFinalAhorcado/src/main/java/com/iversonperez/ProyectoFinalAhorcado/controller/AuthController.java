@@ -2,7 +2,9 @@ package com.iversonperez.ProyectoFinalAhorcado.controller;
 
 import com.iversonperez.ProyectoFinalAhorcado.model.Usuario;
 import com.iversonperez.ProyectoFinalAhorcado.service.UserService;
+import com.iversonperez.ProyectoFinalAhorcado.service.Validacion;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,8 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private Validacion validacion;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> credentials) {
@@ -27,7 +31,14 @@ public class AuthController {
             String username = credentials.get("username");
             String password = credentials.get("password");
 
-            Usuario usuario = userService.validarUsuario(username, password);
+            // Validar credenciales básicas
+            String errorValidacion = validacion.validarCredencialesLogin(username, password);
+            if (errorValidacion != null) {
+                throw new RuntimeException(errorValidacion);
+            }
+
+            // Intentar validar usuario
+            Usuario usuario = userService.validarUsuario(username.trim(), password);
 
             if (usuario != null) {
                 response.put("success", true);
@@ -38,20 +49,24 @@ public class AuthController {
                         "partidasJugadas", usuario.getPartidasJugadas(),
                         "partidasGanadas", usuario.getPartidasGanadas()
                 ));
+                return ResponseEntity.ok(response);
             } else {
-                response.put("success", false);
-                response.put("mensaje", "Credenciales inválidas");
+                throw new RuntimeException("Credenciales invalidas");
             }
 
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("mensaje", "Error en login: " + e.getMessage());
-        }
+            // Manejo de errores específicos
+            String mensajeError = e.getMessage();
+            if (mensajeError.contains("Duplicate entry")) {
+                throw new RuntimeException("Credenciales duplicadas");
+            } else if (mensajeError.contains("cannot be null")) {
+                throw new RuntimeException("Faltan campos requeridos");
+            }
 
-        return ResponseEntity.ok(response);
+            throw new RuntimeException(mensajeError);
+        }
     }
 
-    // POST: Registro
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody Map<String, String> userData) {
         Map<String, Object> response = new HashMap<>();
@@ -60,29 +75,25 @@ public class AuthController {
             String username = userData.get("username");
             String password = userData.get("password");
 
-            // Validaciones básicas
-            if (username == null || username.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("mensaje", "El username es requerido");
-                return ResponseEntity.badRequest().body(response);
+            // Validar username
+            String errorUsername = validacion.validarUsername(username);
+            if (errorUsername != null) {
+                throw new RuntimeException(errorUsername);
             }
 
-
-            if (password == null || password.length() < 6) {
-                response.put("success", false);
-                response.put("mensaje", "La contraseña debe tener al menos 6 caracteres");
-                return ResponseEntity.badRequest().body(response);
+            // Validar password
+            String errorPassword = validacion.validarPassword(password);
+            if (errorPassword != null) {
+                throw new RuntimeException(errorPassword);
             }
 
-            // Verificar si ya existe
-            if (userService.findByUsername(username) != null) {
-                response.put("success", false);
-                response.put("mensaje", "El username ya existe");
-                return ResponseEntity.badRequest().body(response);
+            // Verificar si ya existe el usuario
+            if (userService.findByUsername(username.trim()) != null) {
+                throw new RuntimeException("Username ya existente");
             }
 
-
-            Usuario nuevoUsuario = new Usuario(username,  password);
+            // Crear nuevo usuario
+            Usuario nuevoUsuario = new Usuario(username.trim(), password);
             Usuario usuarioGuardado = userService.save(nuevoUsuario);
 
             response.put("success", true);
@@ -92,20 +103,33 @@ public class AuthController {
                     "username", usuarioGuardado.getUsername()
             ));
 
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("mensaje", "Error en registro: " + e.getMessage());
-        }
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
-        return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            // Manejo de errores específicos de base de datos
+            String mensajeError = e.getMessage();
+            if (mensajeError.contains("email") && mensajeError.contains("default value")) {
+                throw new RuntimeException("Error en campo email requerido");
+            } else if (mensajeError.contains("Duplicate entry")) {
+                throw new RuntimeException("El usuario ya existe");
+            } else if (mensajeError.contains("cannot be null")) {
+                throw new RuntimeException("Faltan campos requeridos");
+            }
+
+            throw new RuntimeException(mensajeError);
+        }
     }
 
-    // GET: Obtener perfil de usuario
     @GetMapping("/profile/{userId}")
     public ResponseEntity<Map<String, Object>> getUserProfile(@PathVariable Integer userId) {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // Validar que el ID sea válido
+            if (userId == null || userId <= 0) {
+                throw new RuntimeException("ID de usuario invalido");
+            }
+
             Optional<Usuario> optionalUsuario = userService.findById(userId);
             if (optionalUsuario.isPresent()) {
                 Usuario usuario = optionalUsuario.get();
@@ -118,16 +142,21 @@ public class AuthController {
                         "porcentajeVictoria", usuario.getPartidasJugadas() > 0 ?
                                 (double) usuario.getPartidasGanadas() / usuario.getPartidasJugadas() * 100 : 0
                 ));
+                return ResponseEntity.ok(response);
             } else {
-                response.put("success", false);
-                response.put("mensaje", "Usuario no encontrado");
+                throw new RuntimeException("Usuario no encontrado");
             }
 
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("mensaje", "Error al obtener perfil: " + e.getMessage());
-        }
+            // Manejo de errores específicos de base de datos
+            String mensajeError = e.getMessage();
+            if (mensajeError.contains("Duplicate entry")) {
+                throw new RuntimeException("Usuario duplicado");
+            } else if (mensajeError.contains("cannot be null")) {
+                throw new RuntimeException("Faltan campos requeridos");
+            }
 
-        return ResponseEntity.ok(response);
+            throw new RuntimeException(mensajeError);
+        }
     }
 }
